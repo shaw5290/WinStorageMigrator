@@ -1,4 +1,8 @@
 {
+    // 1. 开启全局/项目级自动编码检测（解决打开已有 GBK 文件时显示乱码的问题）
+    "files.autoGuessEncoding": true,
+
+    // 2. 专门针对 .bat 批处理文件，强制锁定默认读写编码为 GBK
     "[bat]": {
         "files.encoding": "gbk"
     }
