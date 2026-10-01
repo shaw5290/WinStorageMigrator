@@ -1,13 +1,24 @@
 @echo off
+chcp 936 >nul
 setlocal EnableDelayedExpansion
 
 :: --------------------------------------------------
-:: 0. 修复管理员模式下的工作目录偏移问题
+:: 0. 自动检查并提升管理员权限 (双击即可自动申请管理员)
+:: --------------------------------------------------
+fltmc >nul 2>&1
+if %errorLevel% neq 0 (
+    echo 正在请求管理员权限，请在弹出的 UAC 窗口中选择“是”...
+    powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
+)
+
+:: --------------------------------------------------
+:: 1. 修复管理员模式下的工作目录偏移问题
 :: --------------------------------------------------
 cd /d "%~dp0"
 
 :: --------------------------------------------------
-:: 1. 基础配置区
+:: 2. 基础配置区
 :: --------------------------------------------------
 set "SOURCE_DIR=C:\Users\shaw"
 set "TARGET_DIR=D:\Users\shaw"
@@ -20,23 +31,13 @@ set "BAK_LEN=4"
 :: 黑名单配置 (用空格分隔；若名字有空格用双引号包裹)
 set IGNORE_LIST=AppData "Application Data" "Local Settings" "Start Menu" Cookies Recent SendTo NetHood PrintHood Templates "3D Objects"
 
-:: --------------------------------------------------
-:: 2. 管理员权限检查
-:: --------------------------------------------------
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo [错误] 权限不足！请右键选择 "以管理员身份运行"。
-    pause
-    exit /b 1
-)
-
 :: ==========================================
 :: 交互式主菜单
 :: ==========================================
 :MainMenu
 cls
 echo ===================================================
-echo   全量用户目录与文件迁移映射工具 (WinStorageMigrator)
+echo    全量用户目录与文件迁移映射工具 (WinStorageMigrator)
 echo ===================================================
 echo 当前来源: %SOURCE_DIR%
 echo 当前目标: %TARGET_DIR%
@@ -110,14 +111,14 @@ for /d %%D in ("%SOURCE_DIR%\*") do (
         rem 尝试备份原文件夹
         ren "%%D" "!ITEM_NAME!%DIR_BAK%" 2>nul
         if exist "%%D" (
-            echo   -[失败] 目录被系统死锁，已安全跳过。
+            echo    -[失败] 目录被系统死锁，已安全跳过。
         ) else (
-            echo   -[步骤1] 已备份为: !ITEM_NAME!%DIR_BAK%
-            echo   -[步骤2] 正在迁移数据...
+            echo    -[步骤1] 已备份为: !ITEM_NAME!%DIR_BAK%
+            echo    -[步骤2] 正在迁移数据...
             robocopy "%SOURCE_DIR%\!ITEM_NAME!%DIR_BAK%" "%TARGET_DIR%\!ITEM_NAME!" /E /COPY:DAT /R:1 /W:1 /NJH /NJS /NDL /NC /NS /NP >nul
-            echo   -[步骤3] 创建 mklink /J...
+            echo    -[步骤3] 创建 mklink /J...
             mklink /J "%%D" "%TARGET_DIR%\!ITEM_NAME!" >nul
-            echo   -[成功] 目录映射完毕！
+            echo    -[成功] 目录映射完毕！
         )
     )
 )
@@ -150,14 +151,14 @@ for %%F in ("%SOURCE_DIR%\*") do (
         rem 尝试备份原文件
         ren "%%F" "!ITEM_NAME!%FILE_BAK%" 2>nul
         if exist "%%F" (
-            echo   -[失败] 文件正在运行或被锁定，已安全跳过。
+            echo    -[失败] 文件正在运行或被锁定，已安全跳过。
         ) else (
-            echo   -[步骤1] 已备份为: !ITEM_NAME!%FILE_BAK%
-            echo   -[步骤2] 正在迁移数据...
+            echo    -[步骤1] 已备份为: !ITEM_NAME!%FILE_BAK%
+            echo    -[步骤2] 正在迁移数据...
             copy /Y "%SOURCE_DIR%\!ITEM_NAME!%FILE_BAK%" "%TARGET_DIR%\!ITEM_NAME!" >nul
-            echo   -[步骤3] 创建 mklink...
+            echo    -[步骤3] 创建 mklink...
             mklink "%%F" "%TARGET_DIR%\!ITEM_NAME!" >nul
-            echo   -[成功] 文件映射完毕！
+            echo    -[成功] 文件映射完毕！
         )
     )
 )
@@ -193,14 +194,14 @@ echo.
 echo ---------------------------------------------------
 echo [清理 1/2] 正在检索并删除备份目录...
 for /d %%D in ("!CLEANUP_DIR!\*%DIR_BAK%*") do (
-    echo   -[删除] 目录: %%~nxD
+    echo    -[删除] 目录: %%~nxD
     rmdir /s /q "%%D"
 )
 
 echo ---------------------------------------------------
 echo [清理 2/2] 正在检索并删除备份文件...
 for %%F in ("!CLEANUP_DIR!\*%FILE_BAK%*") do (
-    echo   -[删除] 文件: %%~nxF
+    echo    -[删除] 文件: %%~nxF
     del /f /q "%%F"
 )
 
@@ -311,7 +312,7 @@ goto MainMenu
 :CreateProjectLink
 echo.
 echo ===================================================
-echo           创建项目目录并(可选)自定义快捷映射
+echo            创建项目目录并(可选)自定义快捷映射
 echo ===================================================
 echo.
 
